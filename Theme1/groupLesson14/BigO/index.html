@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Центр Операцій Алгоритмів | Algorithm Ops Center</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="screen-overlay"></div>
+    
+    <header class="tactical-header">
+        <div class="logo">
+            <span class="icon">⌖</span> ALGO_OPS_CENTER // <span class="highlight">UA-MIL-EDU</span>
+        </div>
+        <div class="system-status">
+            STATUS: <span class="status-ok">ONLINE</span> | TIME: <span id="clock">00:00:00</span>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <nav class="tactical-nav">
+            <button class="nav-btn active" data-target="dashboard">
+                <span class="deco">[01]</span> ДАШБОРД / ТЕОРІЯ
+            </button>
+            <button class="nav-btn" data-target="sorting">
+                <span class="deco">[02]</span> ЛОГІСТИКА / СОРТУВАННЯ
+            </button>
+            <button class="nav-btn" data-target="pathfinding">
+                <span class="deco">[03]</span> РОЗВІДКА / ШЛЯХИ
+            </button>
+            <button class="nav-btn" data-target="search">
+                <span class="deco">[04]</span> РОЗШУК / ПОШУК
+            </button>
+        </nav>
+
+        <section id="dashboard" class="panel active">
+            <div class="panel-header">
+                <h2>// ТЕОРІЯ ОБЧИСЛЮВАЛЬНОЇ СКЛАДНОСТІ (BIG O)</h2>
+            </div>
+            <div class="content-grid">
+                <div class="card full-width">
+                    <h3>ПОРІВНЯННЯ СКЛАДНОСТІ</h3>
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="complexityChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>КЛАСИФІКАЦІЯ</h3>
+                    <ul class="tactical-list">
+                        <li class="complexity-o1"><span class="badge o1">O(1)</span> <strong>Константна:</strong> Миттєвий доступ (напр. по рації).</li>
+                        <li class="complexity-ologn"><span class="badge ologn">O(log n)</span> <strong>Логарифмічна:</strong> Бінарний пошук (діли і володарюй).</li>
+                        <li class="complexity-on"><span class="badge on">O(n)</span> <strong>Лінійна:</strong> Перевірка кожного солдата в строю.</li>
+                        <li class="complexity-onlogn"><span class="badge onlogn">O(n log n)</span> <strong>Лінійно-логарифмічна:</strong> Ефективне сортування.</li>
+                        <li class="complexity-on2"><span class="badge on2">O(n²)</span> <strong>Квадратична:</strong> Кожен з кожним (вкладені цикли).</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>ОПЕРАТИВНЕ ЗВЕДЕННЯ</h3>
+                    <p>Розуміння складності алгоритмів є критичним для планування операцій з великими масивами даних. Вибір невірного алгоритму може призвести до "зависання" штабу в критичний момент.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="sorting" class="panel">
+            <div class="panel-header">
+                <h2>// ЛОГІСТИКА: АЛГОРИТМИ СОРТУВАННЯ</h2>
+                <div class="controls">
+                    <button class="action-btn" onclick="initArray()">НОВИЙ МАСИВ</button>
+                    <button class="action-btn" onclick="startBubbleSort()">BUBBLE SORT</button>
+                    <button class="action-btn" onclick="startQuickSort()">QUICK SORT</button>
+                </div>
+            </div>
+            <div class="visualizer-container" id="sortingVisualizer">
+                <!-- Bars will be generated here -->
+            </div>
+            <div class="stats-panel">
+                <div class="stat-box">ОПЕРАЦІЙ: <span id="sortOps">0</span></div>
+                <div class="stat-box">ЧАС: <span id="sortTime">0ms</span></div>
+            </div>
+        </section>
+
+        <section id="pathfinding" class="panel">
+            <div class="panel-header">
+                <h2>// РОЗВІДКА: ПОШУК ШЛЯХУ (A* vs DIJKSTRA)</h2>
+                <div class="controls">
+                    <button class="action-btn" onclick="generateGrid()">СКИДАННЯ МАПИ</button>
+                    <button class="action-btn" onclick="startDijkstra()">DIJKSTRA</button>
+                    <button class="action-btn" onclick="startAStar()">A-STAR</button>
+                </div>
+            </div>
+            <div class="map-container" id="gridMap">
+                <!-- Grid will be generated here -->
+            </div>
+            <div class="legend">
+                <span class="legend-item"><span class="tile start"></span> СТАРТ</span>
+                <span class="legend-item"><span class="tile end"></span> ЦІЛЬ</span>
+                <span class="legend-item"><span class="tile wall"></span> ГОРИ (БЛОК)</span>
+                <span class="legend-item"><span class="tile forest"></span> ЛІС (COST 5)</span>
+                <span class="legend-item"><span class="tile path"></span> МАРШРУТ</span>
+            </div>
+        </section>
+
+        <section id="search" class="panel">
+            <div class="panel-header">
+                <h2>// РОЗШУК: ПОШУК ЦІЛІ</h2>
+                <div class="controls">
+                     <input type="number" id="targetValue" placeholder="ID ЦІЛІ (0-99)" max="99" min="0">
+                     <button class="action-btn" onclick="startLinearSearch()">ЛІНІЙНИЙ ПОШУК</button>
+                     <button class="action-btn" onclick="startBinarySearch()">БІНАРНИЙ ПОШУК</button>
+                </div>
+            </div>
+            <div class="search-visualizer" id="searchContainer">
+                <!-- Boxes -->
+            </div>
+            <div class="log-console" id="searchLog">
+                <!-- Logs -->
+            </div>
+        </section>
+    </main>
+
+    <script src="js/main.js"></script>
+    <script src="js/sorting.js"></script>
+    <script src="js/pathfinding.js"></script>
+    <script src="js/search.js"></script>
+</body>
+</html>

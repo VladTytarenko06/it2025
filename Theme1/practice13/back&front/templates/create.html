@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Record</title>
+</head>
+<body>
+    <h1>Create New Record</h1>
+    <form action="{{ url_for('create') }}" method="POST">
+        <label>Name: <input type="text" name="name"></label><br>
+        <label>Surname: <input type="text" name="surname"></label><br>
+        <label>Rank: <input type="text" name="rank"></label><br>
+        <label>Position: <input type="text" name="position"></label><br>
+        <button type="submit">Create</button>
+    </form>
+    <a href="{{ url_for('index') }}">Back to Home</a>
+</body>
+</html>
