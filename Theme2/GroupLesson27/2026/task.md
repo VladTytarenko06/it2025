@@ -26,10 +26,10 @@ ORDER BY table_name;
 ```sql
 SET search_path = oiaz_train, public;
 
-SELECT 'unit' AS t, count(*) FROM unit
+ECT 'unit' AS t, count(*) FROM unit
 UNION ALL
 SELECT 'report', count(*) FROM report
-UNION ALL
+UNION ALLSEL
 SELECT 'report_item', count(*) FROM report_item;
 
 SELECT min(report_date) AS min_date, max(report_date) AS max_date
