@@ -1,0 +1,246 @@
+{
+  "report_type": "fuel_consumption_analysis",
+  "period": {
+    "start_date": "2026-04-03",
+    "end_date": "2026-04-09",
+    "days": 7
+  },
+  "unit": "liters",
+  "fuel_types": ["diesel", "petrol", "aviation_fuel"],
+  "brigades": [
+    {
+      "brigade_id": "BDE-01",
+      "brigade_name": "1 окрема механізована бригада",
+      "daily_consumption": [
+        {
+          "date": "2026-04-03",
+          "diesel": 4200,
+          "petrol": 1100,
+          "aviation_fuel": 0,
+          "total": 5300
+        },
+        {
+          "date": "2026-04-04",
+          "diesel": 4350,
+          "petrol": 1200,
+          "aviation_fuel": 0,
+          "total": 5550
+        },
+        {
+          "date": "2026-04-05",
+          "diesel": 4600,
+          "petrol": 1250,
+          "aviation_fuel": 0,
+          "total": 5850
+        },
+        {
+          "date": "2026-04-06",
+          "diesel": 4100,
+          "petrol": 1000,
+          "aviation_fuel": 0,
+          "total": 5100
+        },
+        {
+          "date": "2026-04-07",
+          "diesel": 4800,
+          "petrol": 1300,
+          "aviation_fuel": 0,
+          "total": 6100
+        },
+        {
+          "date": "2026-04-08",
+          "diesel": 4950,
+          "petrol": 1350,
+          "aviation_fuel": 0,
+          "total": 6300
+        },
+        {
+          "date": "2026-04-09",
+          "diesel": 4700,
+          "petrol": 1280,
+          "aviation_fuel": 0,
+          "total": 5980
+        }
+      ],
+      "weekly_total": 40180,
+      "average_daily": 5740
+    },
+    {
+      "brigade_id": "BDE-02",
+      "brigade_name": "17 окрема танкова бригада",
+      "daily_consumption": [
+        {
+          "date": "2026-04-03",
+          "diesel": 6200,
+          "petrol": 900,
+          "aviation_fuel": 0,
+          "total": 7100
+        },
+        {
+          "date": "2026-04-04",
+          "diesel": 6450,
+          "petrol": 950,
+          "aviation_fuel": 0,
+          "total": 7400
+        },
+        {
+          "date": "2026-04-05",
+          "diesel": 6700,
+          "petrol": 980,
+          "aviation_fuel": 0,
+          "total": 7680
+        },
+        {
+          "date": "2026-04-06",
+          "diesel": 6100,
+          "petrol": 870,
+          "aviation_fuel": 0,
+          "total": 6970
+        },
+        {
+          "date": "2026-04-07",
+          "diesel": 6900,
+          "petrol": 1020,
+          "aviation_fuel": 0,
+          "total": 7920
+        },
+        {
+          "date": "2026-04-08",
+          "diesel": 7050,
+          "petrol": 1100,
+          "aviation_fuel": 0,
+          "total": 8150
+        },
+        {
+          "date": "2026-04-09",
+          "diesel": 6800,
+          "petrol": 990,
+          "aviation_fuel": 0,
+          "total": 7790
+        }
+      ],
+      "weekly_total": 55010,
+      "average_daily": 7858.57
+    },
+    {
+      "brigade_id": "BDE-03",
+      "brigade_name": "25 окрема повітрянодесантна бригада",
+      "daily_consumption": [
+        {
+          "date": "2026-04-03",
+          "diesel": 3100,
+          "petrol": 800,
+          "aviation_fuel": 1500,
+          "total": 5400
+        },
+        {
+          "date": "2026-04-04",
+          "diesel": 3200,
+          "petrol": 850,
+          "aviation_fuel": 1600,
+          "total": 5650
+        },
+        {
+          "date": "2026-04-05",
+          "diesel": 3400,
+          "petrol": 900,
+          "aviation_fuel": 1700,
+          "total": 6000
+        },
+        {
+          "date": "2026-04-06",
+          "diesel": 3000,
+          "petrol": 780,
+          "aviation_fuel": 1400,
+          "total": 5180
+        },
+        {
+          "date": "2026-04-07",
+          "diesel": 3550,
+          "petrol": 920,
+          "aviation_fuel": 1800,
+          "total": 6270
+        },
+        {
+          "date": "2026-04-08",
+          "diesel": 3600,
+          "petrol": 950,
+          "aviation_fuel": 1850,
+          "total": 6400
+        },
+        {
+          "date": "2026-04-09",
+          "diesel": 3450,
+          "petrol": 910,
+          "aviation_fuel": 1750,
+          "total": 6110
+        }
+      ],
+      "weekly_total": 41010,
+      "average_daily": 5858.57
+    },
+    {
+      "brigade_id": "BDE-04",
+      "brigade_name": "92 окрема штурмова бригада",
+      "daily_consumption": [
+        {
+          "date": "2026-04-03",
+          "diesel": 5100,
+          "petrol": 1400,
+          "aviation_fuel": 0,
+          "total": 6500
+        },
+        {
+          "date": "2026-04-04",
+          "diesel": 5250,
+          "petrol": 1450,
+          "aviation_fuel": 0,
+          "total": 6700
+        },
+        {
+          "date": "2026-04-05",
+          "diesel": 5500,
+          "petrol": 1500,
+          "aviation_fuel": 0,
+          "total": 7000
+        },
+        {
+          "date": "2026-04-06",
+          "diesel": 5000,
+          "petrol": 1320,
+          "aviation_fuel": 0,
+          "total": 6320
+        },
+        {
+          "date": "2026-04-07",
+          "diesel": 5700,
+          "petrol": 1550,
+          "aviation_fuel": 0,
+          "total": 7250
+        },
+        {
+          "date": "2026-04-08",
+          "diesel": 5850,
+          "petrol": 1600,
+          "aviation_fuel": 0,
+          "total": 7450
+        },
+        {
+          "date": "2026-04-09",
+          "diesel": 5600,
+          "petrol": 1520,
+          "aviation_fuel": 0,
+          "total": 7120
+        }
+      ],
+      "weekly_total": 48340,
+      "average_daily": 6905.71
+    }
+  ],
+  "summary": {
+    "total_weekly_consumption": 184540,
+    "highest_consumption_brigade": "BDE-02",
+    "lowest_consumption_brigade": "BDE-01",
+    "most_consumed_fuel_type": "diesel"
+  }
+}

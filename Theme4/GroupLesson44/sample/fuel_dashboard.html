@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Інтерактивний дашборд витрат пального</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #151715;
+      --panel: #1d211d;
+      --panel-2: #252a25;
+      --text: #f1f3ee;
+      --muted: #b7bda9;
+      --accent: #6A653A;
+      --accent-2: #9e9552;
+      --danger: #b65d5d;
+      --warn: #d2aa4c;
+      --ok: #6d965b;
+      --border: #3a4137;
+      --shadow: 0 8px 24px rgba(0,0,0,.28);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #131513, #1a1d1a);
+      color: var(--text);
+    }
+
+    .container {
+      width: min(1440px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 16px 0 28px;
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      background: rgba(29,33,29,.95);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      backdrop-filter: blur(8px);
+    }
+
+    .title-wrap h1 {
+      margin: 0 0 4px;
+      font-size: 28px;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: end;
+      justify-content: flex-end;
+    }
+
+    .control {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 170px;
+    }
+
+    .control label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+    }
+
+    select, button {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 14px;
+    }
+
+    button {
+      cursor: pointer;
+      transition: .2s ease;
+      font-weight: 600;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    .btn-accent { background: var(--accent); }
+
+    .grid-kpi {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .kpi {
+      flex: 1 1 220px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: .2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi:hover { transform: translateY(-2px); border-color: var(--accent-2); }
+    .kpi::after {
+      content: '';
+      position: absolute;
+      inset: auto -30px -30px auto;
+      width: 100px;
+      height: 100px;
+      background: radial-gradient(circle, rgba(106,101,58,.22), transparent 70%);
+    }
+
+    .kpi .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 10px;
+    }
+
+    .kpi .value {
+      font-size: 30px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .kpi .meta { color: var(--muted); font-size: 13px; }
+
+    .main-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 16px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .panel h3 {
+      margin: 0 0 6px;
+      font-size: 18px;
+    }
+
+    .panel .caption {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    .panel.large { flex: 2 1 720px; }
+    .panel.medium { flex: 1 1 420px; }
+    .panel.full { flex: 1 1 100%; }
+
+    canvas { width: 100% !important; height: 320px !important; }
+    #lineChart { height: 360px !important; }
+
+    .heatmap-wrap {
+      overflow: auto;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: #171917;
+    }
+
+    .heatmap {
+      display: grid;
+      grid-template-columns: 220px repeat(7, minmax(90px, 1fr));
+      min-width: 860px;
+    }
+
+    .heatmap .cell {
+      padding: 12px 10px;
+      border-right: 1px solid rgba(255,255,255,.04);
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      font-size: 13px;
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .heatmap .head {
+      background: #202520;
+      color: var(--muted);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+
+    .heatmap .rowhead {
+      justify-content: flex-start;
+      padding-left: 14px;
+      background: #1e221e;
+      font-weight: 600;
+    }
+
+    .heatmap .value-cell {
+      cursor: pointer;
+      transition: .15s ease;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .heatmap .value-cell:hover {
+      outline: 2px solid rgba(255,255,255,.22);
+      outline-offset: -2px;
+      transform: scale(0.985);
+    }
+
+    .heatmap .small {
+      font-size: 11px;
+      opacity: .88;
+    }
+
+    .bottom-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 16px;
+      align-items: stretch;
+    }
+
+    .detail-card {
+      flex: 1 1 320px;
+      min-height: 100%;
+    }
+
+    .detail-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .detail-item {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    .detail-item .k { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .detail-item .v { font-size: 18px; font-weight: 700; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead th {
+      text-align: left;
+      color: var(--muted);
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--panel);
+      cursor: pointer;
+    }
+
+    tbody td {
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    tbody tr { cursor: pointer; }
+    tbody tr:hover { background: rgba(255,255,255,.03); }
+
+    .table-wrap {
+      max-height: 420px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      margin-right: 8px;
+      margin-top: 6px;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .badge { font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border); }
+    .up { color: #b9d889; }
+    .down { color: #e3a59d; }
+
+    @media (max-width: 980px) {
+      .header { position: static; }
+      .controls { justify-content: flex-start; }
+    }
+
+    @media (max-width: 720px) {
+      .container { width: calc(100% - 16px); }
+      .title-wrap h1 { font-size: 23px; }
+      .detail-list { grid-template-columns: 1fr; }
+      .control { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="header">
+      <div class="title-wrap">
+        <h1>Моніторинг витрат пального</h1>
+        <div class="subtitle">Інтерактивний дашборд за період <strong>03.04.2026 – 09.04.2026</strong> · 4 бригади · одиниця виміру: літри</div>
+      </div>
+      <div class="controls">
+        <div class="control">
+          <label for="brigadeSelect">Бригада</label>
+          <select id="brigadeSelect"></select>
+        </div>
+        <div class="control">
+          <label for="fuelSelect">Тип пального</label>
+          <select id="fuelSelect">
+            <option value="all">Усі типи</option>
+            <option value="diesel">Diesel</option>
+            <option value="petrol">Petrol</option>
+            <option value="aviation_fuel">Aviation fuel</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="viewMode">Режим</label>
+          <select id="viewMode">
+            <option value="brigades">Порівняння бригад</option>
+            <option value="fuelTypes">Порівняння типів пального</option>
+            <option value="summary">Сумарний режим</option>
+          </select>
+        </div>
+        <button id="resetBtn">Скинути фільтри</button>
+        <button id="exportBtn" class="btn-accent">Експорт CSV</button>
+      </div>
+    </section>
+
+    <section class="grid-kpi" id="kpiGrid"></section>
+
+    <section class="main-grid">
+      <div class="panel large">
+        <h3>Динаміка витрат</h3>
+        <div class="caption">Клік по легенді приховує ряд, клік по точці відкриває деталізацію.</div>
+        <canvas id="lineChart"></canvas>
+      </div>
+      <div class="panel medium">
+        <h3>Порівняння бригад</h3>
+        <div class="caption">Клік по стовпчику фільтрує весь дашборд на обрану бригаду.</div>
+        <canvas id="barChart"></canvas>
+      </div>
+      <div class="panel medium">
+        <h3>Структура пального</h3>
+        <div class="caption">Показує внесок diesel / petrol / aviation fuel по бригадах.</div>
+        <canvas id="stackedChart"></canvas>
+      </div>
+      <div class="panel large">
+        <h3>Heatmap інтенсивності</h3>
+        <div class="caption">Клік по комірці відкриває деталі дня та бригади.</div>
+        <div class="heatmap-wrap">
+          <div class="heatmap" id="heatmap"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bottom-grid">
+      <div class="panel detail-card">
+        <h3>Панель деталізації</h3>
+        <div class="caption">Автоматично оновлюється при кліку на графік, heatmap або рядок таблиці.</div>
+        <div id="detailHeader" class="tag">Немає вибраного запису</div>
+        <div class="detail-list" id="detailList"></div>
+        <div id="detailComment" class="footer-note"></div>
+      </div>
+      <div class="panel" style="flex: 2 1 720px;">
+        <h3>Таблиця даних</h3>
+        <div class="caption">Сортування по кліку на заголовок. Клік по рядку — деталізація.</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-sort="date">Дата</th>
+                <th data-sort="brigade_name">Бригада</th>
+                <th data-sort="diesel">Diesel</th>
+                <th data-sort="petrol">Petrol</th>
+                <th data-sort="aviation_fuel">Aviation</th>
+                <th data-sort="total">Total</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script>
+const rawData = {
+  report_type: "fuel_consumption_analysis",
+  period: { start_date: "2026-04-03", end_date: "2026-04-09", days: 7 },
+  unit: "liters",
+  fuel_types: ["diesel", "petrol", "aviation_fuel"],
+  brigades: [
+    { brigade_id: "BDE-01", brigade_name: "1 окрема механізована бригада", daily_consumption: [
+      { date: "2026-04-03", diesel: 4200, petrol: 1100, aviation_fuel: 0, total: 5300 },
+      { date: "2026-04-04", diesel: 4350, petrol: 1200, aviation_fuel: 0, total: 5550 },
+      { date: "2026-04-05", diesel: 4600, petrol: 1250, aviation_fuel: 0, total: 5850 },
+      { date: "2026-04-06", diesel: 4100, petrol: 1000, aviation_fuel: 0, total: 5100 },
+      { date: "2026-04-07", diesel: 4800, petrol: 1300, aviation_fuel: 0, total: 6100 },
+      { date: "2026-04-08", diesel: 4950, petrol: 1350, aviation_fuel: 0, total: 6300 },
+      { date: "2026-04-09", diesel: 4700, petrol: 1280, aviation_fuel: 0, total: 5980 }
+    ], weekly_total: 40180, average_daily: 5740 },
+    { brigade_id: "BDE-02", brigade_name: "17 окрема танкова бригада", daily_consumption: [
+      { date: "2026-04-03", diesel: 6200, petrol: 900, aviation_fuel: 0, total: 7100 },
+      { date: "2026-04-04", diesel: 6450, petrol: 950, aviation_fuel: 0, total: 7400 },
+      { date: "2026-04-05", diesel: 6700, petrol: 980, aviation_fuel: 0, total: 7680 },
+      { date: "2026-04-06", diesel: 6100, petrol: 870, aviation_fuel: 0, total: 6970 },
+      { date: "2026-04-07", diesel: 6900, petrol: 1020, aviation_fuel: 0, total: 7920 },
+      { date: "2026-04-08", diesel: 7050, petrol: 1100, aviation_fuel: 0, total: 8150 },
+      { date: "2026-04-09", diesel: 6800, petrol: 990, aviation_fuel: 0, total: 7790 }
+    ], weekly_total: 55010, average_daily: 7858.57 },
+    { brigade_id: "BDE-03", brigade_name: "25 окрема повітрянодесантна бригада", daily_consumption: [
+      { date: "2026-04-03", diesel: 3100, petrol: 800, aviation_fuel: 1500, total: 5400 },
+      { date: "2026-04-04", diesel: 3200, petrol: 850, aviation_fuel: 1600, total: 5650 },
+      { date: "2026-04-05", diesel: 3400, petrol: 900, aviation_fuel: 1700, total: 6000 },
+      { date: "2026-04-06", diesel: 3000, petrol: 780, aviation_fuel: 1400, total: 5180 },
+      { date: "2026-04-07", diesel: 3550, petrol: 920, aviation_fuel: 1800, total: 6270 },
+      { date: "2026-04-08", diesel: 3600, petrol: 950, aviation_fuel: 1850, total: 6400 },
+      { date: "2026-04-09", diesel: 3450, petrol: 910, aviation_fuel: 1750, total: 6110 }
+    ], weekly_total: 41010, average_daily: 5858.57 },
+    { brigade_id: "BDE-04", brigade_name: "92 окрема штурмова бригада", daily_consumption: [
+      { date: "2026-04-03", diesel: 5100, petrol: 1400, aviation_fuel: 0, total: 6500 },
+      { date: "2026-04-04", diesel: 5250, petrol: 1450, aviation_fuel: 0, total: 6700 },
+      { date: "2026-04-05", diesel: 5500, petrol: 1500, aviation_fuel: 0, total: 7000 },
+      { date: "2026-04-06", diesel: 5000, petrol: 1320, aviation_fuel: 0, total: 6320 },
+      { date: "2026-04-07", diesel: 5700, petrol: 1550, aviation_fuel: 0, total: 7250 },
+      { date: "2026-04-08", diesel: 5850, petrol: 1600, aviation_fuel: 0, total: 7450 },
+      { date: "2026-04-09", diesel: 5600, petrol: 1520, aviation_fuel: 0, total: 7120 }
+    ], weekly_total: 48340, average_daily: 6905.71 }
+  ],
+  summary: { total_weekly_consumption: 184540, highest_consumption_brigade: "BDE-02", lowest_consumption_brigade: "BDE-01", most_consumed_fuel_type: "diesel" }
+};
+
+const state = {
+  selectedBrigade: 'all',
+  selectedFuel: 'all',
+  viewMode: 'brigades',
+  sortKey: 'date',
+  sortDir: 'asc',
+  selectedRecord: null,
+  charts: {}
+};
+
+const colors = ['#6A653A', '#9e9552', '#6d965b', '#b65d5d', '#8a9dbd'];
+
+function fmt(n) {
+  return new Intl.NumberFormat('uk-UA').format(Math.round(n));
+}
+function fmt1(n) {
+  return new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 1 }).format(n);
+}
+function formatDate(iso) {
+  const [y,m,d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+function getBrigadeById(id) {
+  return rawData.brigades.find(b => b.brigade_id === id);
+}
+function buildFlatRows() {
+  return rawData.brigades.flatMap(brigade => brigade.daily_consumption.map(day => ({
+    brigade_id: brigade.brigade_id,
+    brigade_name: brigade.brigade_name,
+    ...day
+  })));
+}
+function getFilteredRows() {
+  let rows = buildFlatRows();
+  if (state.selectedBrigade !== 'all') rows = rows.filter(r => r.brigade_id === state.selectedBrigade);
+  return rows;
+}
+function getDates() {
+  return rawData.brigades[0].daily_consumption.map(d => d.date);
+}
+function buildFuelTotals(rows) {
+  return {
+    diesel: rows.reduce((s, r) => s + r.diesel, 0),
+    petrol: rows.reduce((s, r) => s + r.petrol, 0),
+    aviation_fuel: rows.reduce((s, r) => s + r.aviation_fuel, 0),
+    total: rows.reduce((s, r) => s + r.total, 0)
+  };
+}
+function averageDay(rows) {
+  const uniqueDays = [...new Set(rows.map(r => r.date))].length || 1;
+  return rows.reduce((s,r) => s + effectiveTotal(r), 0) / uniqueDays;
+}
+function effectiveTotal(row) {
+  return state.selectedFuel === 'all' ? row.total : row[state.selectedFuel];
+}
+function rowFor(brigadeId, date) {
+  return buildFlatRows().find(r => r.brigade_id === brigadeId && r.date === date);
+}
+
+function populateBrigadeSelect() {
+  const sel = document.getElementById('brigadeSelect');
+  sel.innerHTML = `<option value="all">Усі бригади</option>` + rawData.brigades.map(b =>
+    `<option value="${b.brigade_id}">${b.brigade_id} — ${b.brigade_name}</option>`).join('');
+}
+
+function renderKPI() {
+  const rows = getFilteredRows();
+  const total = rows.reduce((s, r) => s + effectiveTotal(r), 0);
+  const fuelTotals = buildFuelTotals(rows);
+  const dominantFuel = Object.entries({ diesel: fuelTotals.diesel, petrol: fuelTotals.petrol, aviation_fuel: fuelTotals.aviation_fuel })
+    .sort((a,b) => b[1]-a[1])[0][0];
+
+  const byBrigade = rawData.brigades.map(b => {
+    const items = rows.filter(r => r.brigade_id === b.brigade_id);
+    return {
+      id: b.brigade_id,
+      name: b.brigade_name,
+      total: items.reduce((s, r) => s + effectiveTotal(r), 0)
+    };
+  }).filter(x => x.total > 0).sort((a,b) => b.total - a.total);
+
+  const top = byBrigade[0];
+  const low = byBrigade[byBrigade.length - 1];
+  const avg = averageDay(rows);
+
+  const dates = [...new Set(rows.map(r => r.date))].sort();
+  const dailyTotals = dates.map(date => rows.filter(r => r.date === date).reduce((s, r) => s + effectiveTotal(r), 0));
+  const last = dailyTotals[dailyTotals.length - 1] || 0;
+  const prev = dailyTotals[dailyTotals.length - 2] || 0;
+  const delta = prev ? ((last - prev) / prev) * 100 : 0;
+
+  const items = [
+    { label: 'Загальна витрата', value: fmt(total) + ' л', meta: 'За обраним зрізом', action: () => { state.selectedRecord = null; renderDetail(null, { label:'Загальна витрата', value: total }); } },
+    { label: 'Середньодобова', value: fmt1(avg) + ' л', meta: 'Середнє за день', action: () => { state.viewMode='summary'; syncControls(); renderAll(); } },
+    { label: 'Найбільше споживання', value: top ? top.id : '—', meta: top ? top.name : '', action: () => { if(top){ state.selectedBrigade = top.id; syncControls(); renderAll(); } } },
+    { label: 'Найменше споживання', value: low ? low.id : '—', meta: low ? low.name : '', action: () => { if(low){ state.selectedBrigade = low.id; syncControls(); renderAll(); } } },
+    { label: 'Домінуючий тип', value: dominantFuel, meta: `Зміна до попер. дня: ${delta >= 0 ? '▲' : '▼'} ${fmt1(Math.abs(delta))}%`, action: () => { state.selectedFuel = dominantFuel; syncControls(); renderAll(); } }
+  ];
+
+  const el = document.getElementById('kpiGrid');
+  el.innerHTML = '';
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'kpi';
+    div.innerHTML = `<div class="label">${item.label}</div><div class="value">${item.value}</div><div class="meta">${item.meta}</div>`;
+    div.onclick = item.action;
+    el.appendChild(div);
+  });
+}
+
+function makeDatasetsForLine() {
+  const dates = getDates();
+  const rows = getFilteredRows();
+
+  if (state.viewMode === 'summary') {
+    const data = dates.map(date => rows.filter(r => r.date === date).reduce((s,r) => s + effectiveTotal(r), 0));
+    return [{ label: state.selectedFuel === 'all' ? 'Сумарно' : state.selectedFuel, data, borderColor: colors[0], backgroundColor: colors[0], tension: .25 }];
+  }
+
+  if (state.viewMode === 'fuelTypes') {
+    const fuels = ['diesel', 'petrol', 'aviation_fuel'];
+    return fuels.filter(f => state.selectedFuel === 'all' || state.selectedFuel === f).map((fuel, i) => ({
+      label: fuel,
+      data: dates.map(date => rows.filter(r => r.date === date).reduce((s,r) => s + r[fuel], 0)),
+      borderColor: colors[i],
+      backgroundColor: colors[i],
+      tension: .25
+    }));
+  }
+
+  const brigades = (state.selectedBrigade === 'all' ? rawData.brigades : rawData.brigades.filter(b => b.brigade_id === state.selectedBrigade));
+  return brigades.map((brigade, i) => ({
+    label: brigade.brigade_id,
+    data: dates.map(date => {
+      const record = rowFor(brigade.brigade_id, date);
+      return record ? effectiveTotal(record) : 0;
+    }),
+    borderColor: colors[i % colors.length],
+    backgroundColor: colors[i % colors.length],
+    tension: .25
+  }));
+}
+
+function renderLineChart() {
+  const ctx = document.getElementById('lineChart');
+  state.charts.line?.destroy();
+  state.charts.line = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: getDates().map(formatDate),
+      datasets: makeDatasetsForLine()
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: true },
+      plugins: {
+        legend: { labels: { color: '#f1f3ee' } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${fmt(ctx.raw)} л`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#b7bda9' }, grid: { color: 'rgba(255,255,255,.05)' } },
+        y: { ticks: { color: '#b7bda9' }, grid: { color: 'rgba(255,255,255,.06)' } }
+      },
+      onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const point = elements[0];
+        const date = getDates()[point.index];
+        const ds = state.charts.line.data.datasets[point.datasetIndex];
+        const label = ds.label;
+        let record = null;
+        if (state.viewMode === 'brigades' && /^BDE-/.test(label)) {
+          record = rowFor(label, date);
+        } else {
+          const rows = getFilteredRows().filter(r => r.date === date);
+          record = {
+            date,
+            brigade_name: state.selectedBrigade === 'all' ? 'Усі бригади' : getBrigadeById(state.selectedBrigade).brigade_name,
+            brigade_id: state.selectedBrigade,
+            diesel: rows.reduce((s,r) => s+r.diesel, 0),
+            petrol: rows.reduce((s,r) => s+r.petrol, 0),
+            aviation_fuel: rows.reduce((s,r) => s+r.aviation_fuel, 0),
+            total: rows.reduce((s,r) => s+r.total, 0)
+          };
+        }
+        state.selectedRecord = record;
+        renderDetail(record);
+      }
+    }
+  });
+}
+
+function renderBarChart() {
+  const ctx = document.getElementById('barChart');
+  state.charts.bar?.destroy();
+  const brigades = rawData.brigades.map(b => {
+    const rows = buildFlatRows().filter(r => r.brigade_id === b.brigade_id);
+    return { id: b.brigade_id, name: b.brigade_name, total: rows.reduce((s,r) => s + (state.selectedFuel === 'all' ? r.total : r[state.selectedFuel]), 0) };
+  });
+  state.charts.bar = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: brigades.map(b => b.id),
+      datasets: [{ label: 'Тижнева витрата', data: brigades.map(b => b.total), backgroundColor: colors.slice(0, brigades.length) }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#b7bda9' }, grid: { color: 'rgba(255,255,255,.06)' } },
+        y: { ticks: { color: '#f1f3ee' }, grid: { display: false } }
+      },
+      onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const index = elements[0].index;
+        state.selectedBrigade = brigades[index].id;
+        syncControls();
+        renderAll();
+      }
+    }
+  });
+}
+
+function renderStackedChart() {
+  const ctx = document.getElementById('stackedChart');
+  state.charts.stacked?.destroy();
+  const brigades = (state.selectedBrigade === 'all' ? rawData.brigades : rawData.brigades.filter(b => b.brigade_id === state.selectedBrigade));
+  const datasets = ['diesel','petrol','aviation_fuel'].map((fuel, i) => ({
+    label: fuel,
+    data: brigades.map(b => b.daily_consumption.reduce((s,r) => s + r[fuel], 0)),
+    backgroundColor: colors[i]
+  }));
+  state.charts.stacked = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: brigades.map(b => b.brigade_id), datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#f1f3ee' } },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw)} л` } }
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: '#f1f3ee' }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: '#b7bda9' }, grid: { color: 'rgba(255,255,255,.06)' } }
+      },
+      onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const el = elements[0];
+        state.selectedFuel = datasets[el.datasetIndex].label;
+        syncControls();
+        renderAll();
+      }
+    }
+  });
+}
+
+function heatColor(value, max) {
+  const ratio = max ? value / max : 0;
+  const alpha = 0.16 + ratio * 0.75;
+  if (ratio > .82) return `rgba(182,93,93,${alpha})`;
+  if (ratio > .55) return `rgba(210,170,76,${alpha})`;
+  return `rgba(106,101,58,${alpha})`;
+}
+
+function renderHeatmap() {
+  const dates = getDates();
+  const brigades = (state.selectedBrigade === 'all' ? rawData.brigades : rawData.brigades.filter(b => b.brigade_id === state.selectedBrigade));
+  const matrix = brigades.flatMap(b => dates.map(date => {
+    const rec = rowFor(b.brigade_id, date);
+    return rec ? effectiveTotal(rec) : 0;
+  }));
+  const max = Math.max(...matrix, 1);
+  const root = document.getElementById('heatmap');
+  root.innerHTML = '';
+
+  root.appendChild(cell('Бригада / дата', 'cell head rowhead'));
+  dates.forEach(date => root.appendChild(cell(formatDate(date), 'cell head')));
+
+  brigades.forEach(brigade => {
+    root.appendChild(cell(`${brigade.brigade_id} — ${brigade.brigade_name}`, 'cell rowhead'));
+    dates.forEach(date => {
+      const rec = rowFor(brigade.brigade_id, date);
+      const val = rec ? effectiveTotal(rec) : 0;
+      const c = document.createElement('div');
+      c.className = 'cell value-cell';
+      c.style.background = heatColor(val, max);
+      c.innerHTML = `<div>${fmt(val)} л</div><div class="small">${formatDate(date)}</div>`;
+      c.onclick = () => { state.selectedRecord = rec; renderDetail(rec); };
+      root.appendChild(c);
+    });
+  });
+}
+function cell(text, cls) {
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = text;
+  return d;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  let rows = getFilteredRows().map(r => ({ ...r, effective: effectiveTotal(r) }));
+  rows.sort((a,b) => {
+    const dir = state.sortDir === 'asc' ? 1 : -1;
+    const ka = a[state.sortKey], kb = b[state.sortKey];
+    return (ka > kb ? 1 : ka < kb ? -1 : 0) * dir;
+  });
+  tbody.innerHTML = rows.map(r => `
+    <tr data-brigade="${r.brigade_id}" data-date="${r.date}">
+      <td>${formatDate(r.date)}</td>
+      <td>${r.brigade_id}</td>
+      <td>${fmt(r.diesel)}</td>
+      <td>${fmt(r.petrol)}</td>
+      <td>${fmt(r.aviation_fuel)}</td>
+      <td><strong>${fmt(r.total)}</strong></td>
+    </tr>
+  `).join('');
+  [...tbody.querySelectorAll('tr')].forEach(tr => {
+    tr.onclick = () => {
+      const rec = rowFor(tr.dataset.brigade, tr.dataset.date);
+      state.selectedRecord = rec;
+      renderDetail(rec);
+    };
+  });
+}
+
+function renderDetail(record, custom=null) {
+  const header = document.getElementById('detailHeader');
+  const list = document.getElementById('detailList');
+  const comment = document.getElementById('detailComment');
+
+  if (custom) {
+    header.textContent = custom.label;
+    list.innerHTML = `<div class="detail-item"><div class="k">Значення</div><div class="v">${fmt(custom.value)} л</div></div>`;
+    comment.textContent = 'Оберіть точку на графіку, комірку heatmap або рядок таблиці для розширеної деталізації.';
+    return;
+  }
+
+  if (!record) {
+    header.textContent = 'Немає вибраного запису';
+    list.innerHTML = '';
+    comment.textContent = 'Оберіть точку на графіку, комірку heatmap або рядок таблиці.';
+    return;
+  }
+
+  const brigadeAvg = buildFlatRows().filter(r => r.brigade_id === record.brigade_id).reduce((s,r) => s + effectiveTotal(r), 0) / 7;
+  const delta = ((effectiveTotal(record) - brigadeAvg) / brigadeAvg) * 100;
+  const prev = rowFor(record.brigade_id, shiftDate(record.date, -1));
+  const dayDelta = prev ? ((effectiveTotal(record) - effectiveTotal(prev)) / (effectiveTotal(prev) || 1)) * 100 : 0;
+
+  header.textContent = `${record.brigade_id || 'Зріз'} · ${formatDate(record.date)}`;
+  list.innerHTML = `
+    <div class="detail-item"><div class="k">Бригада</div><div class="v">${record.brigade_id || '—'}</div></div>
+    <div class="detail-item"><div class="k">Загалом</div><div class="v">${fmt(record.total)} л</div></div>
+    <div class="detail-item"><div class="k">Diesel</div><div class="v">${fmt(record.diesel)} л</div></div>
+    <div class="detail-item"><div class="k">Petrol</div><div class="v">${fmt(record.petrol)} л</div></div>
+    <div class="detail-item"><div class="k">Aviation</div><div class="v">${fmt(record.aviation_fuel)} л</div></div>
+    <div class="detail-item"><div class="k">Відхилення від середнього</div><div class="v ${delta>=0?'up':'down'}">${delta>=0?'▲':'▼'} ${fmt1(Math.abs(delta))}%</div></div>
+  `;
+
+  let msg = `Для ${record.brigade_id} за ${formatDate(record.date)} зафіксовано ${fmt(record.total)} л.`;
+  msg += ` Порівняно із середнім добовим значенням бригади це ${delta >= 0 ? 'вище' : 'нижче'} на ${fmt1(Math.abs(delta))}%.`;
+  if (prev) msg += ` Відносно попереднього дня зміна становить ${dayDelta >= 0 ? '▲' : '▼'} ${fmt1(Math.abs(dayDelta))}%.`;
+  if (record.aviation_fuel > 0) msg += ' Є витрата авіаційного пального, що виділяє цей запис серед більшості інших.';
+  comment.textContent = msg;
+}
+
+function shiftDate(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0,10);
+}
+
+function syncControls() {
+  document.getElementById('brigadeSelect').value = state.selectedBrigade;
+  document.getElementById('fuelSelect').value = state.selectedFuel;
+  document.getElementById('viewMode').value = state.viewMode;
+}
+
+function exportCSV() {
+  const rows = getFilteredRows();
+  const header = ['date','brigade_id','brigade_name','diesel','petrol','aviation_fuel','total'];
+  const csv = [header.join(',')].concat(rows.map(r => [r.date, r.brigade_id, `"${r.brigade_name}"`, r.diesel, r.petrol, r.aviation_fuel, r.total].join(','))).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'fuel_dashboard_export.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function bindEvents() {
+  document.getElementById('brigadeSelect').addEventListener('change', e => { state.selectedBrigade = e.target.value; renderAll(); });
+  document.getElementById('fuelSelect').addEventListener('change', e => { state.selectedFuel = e.target.value; renderAll(); });
+  document.getElementById('viewMode').addEventListener('change', e => { state.viewMode = e.target.value; renderAll(); });
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    state.selectedBrigade = 'all';
+    state.selectedFuel = 'all';
+    state.viewMode = 'brigades';
+    state.selectedRecord = null;
+    syncControls();
+    renderAll();
+  });
+  document.getElementById('exportBtn').addEventListener('click', exportCSV);
+  document.querySelectorAll('th[data-sort]').forEach(th => th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (state.sortKey === key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+    else { state.sortKey = key; state.sortDir = 'asc'; }
+    renderTable();
+  }));
+}
+
+function renderAll() {
+  renderKPI();
+  renderLineChart();
+  renderBarChart();
+  renderStackedChart();
+  renderHeatmap();
+  renderTable();
+  renderDetail(state.selectedRecord);
+}
+
+populateBrigadeSelect();
+bindEvents();
+syncControls();
+renderAll();
+</script>
+</body>
+</html>

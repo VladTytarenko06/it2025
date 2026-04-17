@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Дашборд аналітики витрати пального</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #3b82f6;
+      --accent-2: #10b981;
+      --accent-3: #f59e0b;
+      --accent-4: #ef4444;
+      --border: #dbe3ea;
+      --shadow: 0 6px 18px rgba(0,0,0,0.08);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e3a8a, #2563eb);
+      color: white;
+      padding: 24px 16px;
+      box-shadow: var(--shadow);
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+
+    header p {
+      margin: 0;
+      opacity: 0.95;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px 16px 32px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--card);
+      padding: 16px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 220px;
+      flex: 1;
+    }
+
+    .control-group label {
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: bold;
+    }
+
+    select {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 15px;
+    }
+
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      flex: 1 1 220px;
+      min-width: 220px;
+    }
+
+    .card .label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .card .value {
+      font-size: 30px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .card .sub {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .panel {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      flex: 1 1 480px;
+      min-width: 320px;
+    }
+
+    .panel h2 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      font-size: 20px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 320px;
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #eef2f7;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #374151;
+      position: sticky;
+      top: 0;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    .insights {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .insights h2 {
+      margin-top: 0;
+    }
+
+    .insights ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .insights li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 22px;
+      }
+
+      .card .value {
+        font-size: 24px;
+      }
+
+      canvas {
+        height: 260px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Інтерактивний дашборд витрати пального</h1>
+    <p>Аналітика за останній тиждень по 4 бригадах</p>
+  </header>
+
+  <div class="container">
+    <section class="controls">
+      <div class="control-group">
+        <label for="brigadeSelect">Бригада</label>
+        <select id="brigadeSelect">
+          <option value="all">Усі бригади</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="fuelSelect">Тип пального</label>
+        <select id="fuelSelect">
+          <option value="total">Загальний обсяг</option>
+          <option value="diesel">Дизель</option>
+          <option value="petrol">Бензин</option>
+          <option value="aviation_fuel">Авіаційне паливо</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="cards">
+      <div class="card">
+        <div class="label">Загальна витрата</div>
+        <div class="value" id="totalValue">0</div>
+        <div class="sub">літрів за обраний період</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Середньодобова витрата</div>
+        <div class="value" id="avgValue">0</div>
+        <div class="sub">літрів на добу</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Піковий день</div>
+        <div class="value" id="peakDayValue">—</div>
+        <div class="sub" id="peakDaySub">0 літрів</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Мінімальний день</div>
+        <div class="value" id="minDayValue">—</div>
+        <div class="sub" id="minDaySub">0 літрів</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <h2>Динаміка витрати по днях</h2>
+        <canvas id="barChart" width="700" height="320"></canvas>
+      </div>
+
+      <div class="panel">
+        <h2>Структура витрати пального</h2>
+        <canvas id="pieChart" width="700" height="320"></canvas>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Таблиця деталізації</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Дизель</th>
+              <th>Бензин</th>
+              <th>Авіаційне</th>
+              <th>Разом</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="insights">
+      <h2>Короткі висновки</h2>
+      <ul id="insightsList"></ul>
+    </section>
+
+    <div class="footer-note">
+      Дашборд працює повністю локально в одному HTML-файлі без зовнішніх бібліотек.
+    </div>
+  </div>
+
+  <script>
+    const data = {
+      "report_type": "fuel_consumption_analysis",
+      "period": {
+        "start_date": "2026-04-03",
+        "end_date": "2026-04-09",
+        "days": 7
+      },
+      "unit": "liters",
+      "fuel_types": ["diesel", "petrol", "aviation_fuel"],
+      "brigades": [
+        {
+          "brigade_id": "BDE-01",
+          "brigade_name": "1 окрема механізована бригада",
+          "daily_consumption": [
+            {"date": "2026-04-03", "diesel": 4200, "petrol": 1100, "aviation_fuel": 0, "total": 5300},
+            {"date": "2026-04-04", "diesel": 4350, "petrol": 1200, "aviation_fuel": 0, "total": 5550},
+            {"date": "2026-04-05", "diesel": 4600, "petrol": 1250, "aviation_fuel": 0, "total": 5850},
+            {"date": "2026-04-06", "diesel": 4100, "petrol": 1000, "aviation_fuel": 0, "total": 5100},
+            {"date": "2026-04-07", "diesel": 4800, "petrol": 1300, "aviation_fuel": 0, "total": 6100},
+            {"date": "2026-04-08", "diesel": 4950, "petrol": 1350, "aviation_fuel": 0, "total": 6300},
+            {"date": "2026-04-09", "diesel": 4700, "petrol": 1280, "aviation_fuel": 0, "total": 5980}
+          ],
+          "weekly_total": 40180,
+          "average_daily": 5740
+        },
+        {
+          "brigade_id": "BDE-02",
+          "brigade_name": "17 окрема танкова бригада",
+          "daily_consumption": [
+            {"date": "2026-04-03", "diesel": 6200, "petrol": 900, "aviation_fuel": 0, "total": 7100},
+            {"date": "2026-04-04", "diesel": 6450, "petrol": 950, "aviation_fuel": 0, "total": 7400},
+            {"date": "2026-04-05", "diesel": 6700, "petrol": 980, "aviation_fuel": 0, "total": 7680},
+            {"date": "2026-04-06", "diesel": 6100, "petrol": 870, "aviation_fuel": 0, "total": 6970},
+            {"date": "2026-04-07", "diesel": 6900, "petrol": 1020, "aviation_fuel": 0, "total": 7920},
+            {"date": "2026-04-08", "diesel": 7050, "petrol": 1100, "aviation_fuel": 0, "total": 8150},
+            {"date": "2026-04-09", "diesel": 6800, "petrol": 990, "aviation_fuel": 0, "total": 7790}
+          ],
+          "weekly_total": 55010,
+          "average_daily": 7858.57
+        },
+        {
+          "brigade_id": "BDE-03",
+          "brigade_name": "25 окрема повітрянодесантна бригада",
+          "daily_consumption": [
+            {"date": "2026-04-03", "diesel": 3100, "petrol": 800, "aviation_fuel": 1500, "total": 5400},
+            {"date": "2026-04-04", "diesel": 3200, "petrol": 850, "aviation_fuel": 1600, "total": 5650},
+            {"date": "2026-04-05", "diesel": 3400, "petrol": 900, "aviation_fuel": 1700, "total": 6000},
+            {"date": "2026-04-06", "diesel": 3000, "petrol": 780, "aviation_fuel": 1400, "total": 5180},
+            {"date": "2026-04-07", "diesel": 3550, "petrol": 920, "aviation_fuel": 1800, "total": 6270},
+            {"date": "2026-04-08", "diesel": 3600, "petrol": 950, "aviation_fuel": 1850, "total": 6400},
+            {"date": "2026-04-09", "diesel": 3450, "petrol": 910, "aviation_fuel": 1750, "total": 6110}
+          ],
+          "weekly_total": 41010,
+          "average_daily": 5858.57
+        },
+        {
+          "brigade_id": "BDE-04",
+          "brigade_name": "92 окрема штурмова бригада",
+          "daily_consumption": [
+            {"date": "2026-04-03", "diesel": 5100, "petrol": 1400, "aviation_fuel": 0, "total": 6500},
+            {"date": "2026-04-04", "diesel": 5250, "petrol": 1450, "aviation_fuel": 0, "total": 6700},
+            {"date": "2026-04-05", "diesel": 5500, "petrol": 1500, "aviation_fuel": 0, "total": 7000},
+            {"date": "2026-04-06", "diesel": 5000, "petrol": 1320, "aviation_fuel": 0, "total": 6320},
+            {"date": "2026-04-07", "diesel": 5700, "petrol": 1550, "aviation_fuel": 0, "total": 7250},
+            {"date": "2026-04-08", "diesel": 5850, "petrol": 1600, "aviation_fuel": 0, "total": 7450},
+            {"date": "2026-04-09", "diesel": 5600, "petrol": 1520, "aviation_fuel": 0, "total": 7120}
+          ],
+          "weekly_total": 48340,
+          "average_daily": 6905.71
+        }
+      ],
+      "summary": {
+        "total_weekly_consumption": 184540,
+        "highest_consumption_brigade": "BDE-02",
+        "lowest_consumption_brigade": "BDE-01",
+        "most_consumed_fuel_type": "diesel"
+      }
+    };
+
+    const brigadeSelect = document.getElementById("brigadeSelect");
+    const fuelSelect = document.getElementById("fuelSelect");
+    const tableBody = document.getElementById("tableBody");
+    const insightsList = document.getElementById("insightsList");
+
+    const totalValue = document.getElementById("totalValue");
+    const avgValue = document.getElementById("avgValue");
+    const peakDayValue = document.getElementById("peakDayValue");
+    const peakDaySub = document.getElementById("peakDaySub");
+    const minDayValue = document.getElementById("minDayValue");
+    const minDaySub = document.getElementById("minDaySub");
+
+    const barCanvas = document.getElementById("barChart");
+    const pieCanvas = document.getElementById("pieChart");
+    const barCtx = barCanvas.getContext("2d");
+    const pieCtx = pieCanvas.getContext("2d");
+
+    function formatNumber(num) {
+      return new Intl.NumberFormat("uk-UA").format(Math.round(num));
+    }
+
+    function populateBrigades() {
+      data.brigades.forEach(brigade => {
+        const option = document.createElement("option");
+        option.value = brigade.brigade_id;
+        option.textContent = brigade.brigade_name;
+        brigadeSelect.appendChild(option);
+      });
+    }
+
+    function getSelectedData() {
+      const brigadeId = brigadeSelect.value;
+      const fuelType = fuelSelect.value;
+
+      let merged = [];
+
+      if (brigadeId === "all") {
+        const dateMap = {};
+
+        data.brigades.forEach(brigade => {
+          brigade.daily_consumption.forEach(day => {
+            if (!dateMap[day.date]) {
+              dateMap[day.date] = {
+                date: day.date,
+                diesel: 0,
+                petrol: 0,
+                aviation_fuel: 0,
+                total: 0
+              };
+            }
+            dateMap[day.date].diesel += day.diesel;
+            dateMap[day.date].petrol += day.petrol;
+            dateMap[day.date].aviation_fuel += day.aviation_fuel;
+            dateMap[day.date].total += day.total;
+          });
+        });
+
+        merged = Object.values(dateMap).sort((a, b) => a.date.localeCompare(b.date));
+      } else {
+        const brigade = data.brigades.find(b => b.brigade_id === brigadeId);
+        merged = brigade ? brigade.daily_consumption : [];
+      }
+
+      return { rows: merged, fuelType };
+    }
+
+    function updateCards(rows, fuelType) {
+      const values = rows.map(r => fuelType === "total" ? r.total : r[fuelType]);
+      const total = values.reduce((a, b) => a + b, 0);
+      const avg = total / rows.length;
+
+      const max = Math.max(...values);
+      const min = Math.min(...values);
+
+      const peakIndex = values.indexOf(max);
+      const minIndex = values.indexOf(min);
+
+      totalValue.textContent = formatNumber(total);
+      avgValue.textContent = formatNumber(avg);
+      peakDayValue.textContent = rows[peakIndex]?.date || "—";
+      peakDaySub.textContent = `${formatNumber(max)} л`;
+      minDayValue.textContent = rows[minIndex]?.date || "—";
+      minDaySub.textContent = `${formatNumber(min)} л`;
+    }
+
+    function updateTable(rows) {
+      tableBody.innerHTML = "";
+      rows.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row.date}</td>
+          <td>${formatNumber(row.diesel)}</td>
+          <td>${formatNumber(row.petrol)}</td>
+          <td>${formatNumber(row.aviation_fuel)}</td>
+          <td><strong>${formatNumber(row.total)}</strong></td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    function drawBarChart(rows, fuelType) {
+      const ctx = barCtx;
+      const width = barCanvas.width;
+      const height = barCanvas.height;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const padding = 50;
+      const chartW = width - padding * 2;
+      const chartH = height - padding * 2;
+
+      const values = rows.map(r => fuelType === "total" ? r.total : r[fuelType]);
+      const labels = rows.map(r => r.date.slice(5));
+      const maxVal = Math.max(...values, 1);
+      const barWidth = chartW / values.length * 0.6;
+      const gap = chartW / values.length * 0.4;
+
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding, padding);
+      ctx.lineTo(padding, height - padding);
+      ctx.lineTo(width - padding, height - padding);
+      ctx.stroke();
+
+      for (let i = 0; i <= 5; i++) {
+        const y = height - padding - (chartH / 5) * i;
+        const val = Math.round((maxVal / 5) * i);
+
+        ctx.strokeStyle = "#e5e7eb";
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(width - padding, y);
+        ctx.stroke();
+
+        ctx.fillStyle = "#6b7280";
+        ctx.font = "12px Arial";
+        ctx.fillText(formatNumber(val), 8, y + 4);
+      }
+
+      values.forEach((val, i) => {
+        const x = padding + i * (barWidth + gap) + gap / 2;
+        const h = (val / maxVal) * chartH;
+        const y = height - padding - h;
+
+        ctx.fillStyle = "#3b82f6";
+        ctx.fillRect(x, y, barWidth, h);
+
+        ctx.fillStyle = "#111827";
+        ctx.font = "12px Arial";
+        ctx.save();
+        ctx.translate(x + barWidth / 2, height - padding + 16);
+        ctx.rotate(-0.35);
+        ctx.textAlign = "right";
+        ctx.fillText(labels[i], 0, 0);
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(x + barWidth / 2, y - 6);
+        ctx.rotate(-0.2);
+        ctx.textAlign = "center";
+        ctx.fillText(formatNumber(val), 0, 0);
+        ctx.restore();
+      });
+    }
+
+    function drawPieChart(rows) {
+      const ctx = pieCtx;
+      const width = pieCanvas.width;
+      const height = pieCanvas.height;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const totals = {
+        diesel: rows.reduce((sum, r) => sum + r.diesel, 0),
+        petrol: rows.reduce((sum, r) => sum + r.petrol, 0),
+        aviation_fuel: rows.reduce((sum, r) => sum + r.aviation_fuel, 0)
+      };
+
+      const values = [totals.diesel, totals.petrol, totals.aviation_fuel];
+      const labels = ["Дизель", "Бензин", "Авіаційне"];
+      const colors = ["#3b82f6", "#10b981", "#f59e0b"];
+      const total = values.reduce((a, b) => a + b, 0) || 1;
+
+      const cx = 220;
+      const cy = height / 2;
+      const radius = 100;
+
+      let startAngle = -Math.PI / 2;
+
+      values.forEach((value, i) => {
+        const slice = (value / total) * Math.PI * 2;
+        const endAngle = startAngle + slice;
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+
+        startAngle = endAngle;
+      });
+
+      labels.forEach((label, i) => {
+        const x = 420;
+        const y = 90 + i * 70;
+
+        ctx.fillStyle = colors[i];
+        ctx.fillRect(x, y, 20, 20);
+
+        ctx.fillStyle = "#111827";
+        ctx.font = "15px Arial";
+        const percent = ((values[i] / total) * 100).toFixed(1);
+        ctx.fillText(`${label}: ${formatNumber(values[i])} л (${percent}%)`, x + 30, y + 15);
+      });
+    }
+
+    function updateInsights(rows, fuelType) {
+      const total = rows.reduce((sum, r) => sum + (fuelType === "total" ? r.total : r[fuelType]), 0);
+      const avg = total / rows.length;
+
+      const dailyTotals = rows.map(r => ({
+        date: r.date,
+        value: fuelType === "total" ? r.total : r[fuelType]
+      }));
+
+      const peak = dailyTotals.reduce((a, b) => a.value > b.value ? a : b);
+      const min = dailyTotals.reduce((a, b) => a.value < b.value ? a : b);
+
+      const brigadeId = brigadeSelect.value;
+      let brigadeText = "по всіх бригадах";
+      if (brigadeId !== "all") {
+        const brigade = data.brigades.find(b => b.brigade_id === brigadeId);
+        brigadeText = `по бригаді "${brigade.brigade_name}"`;
+      }
+
+      let fuelText = "загальної витрати";
+      if (fuelType === "diesel") fuelText = "витрати дизеля";
+      if (fuelType === "petrol") fuelText = "витрати бензину";
+      if (fuelType === "aviation_fuel") fuelText = "витрати авіаційного пального";
+
+      insightsList.innerHTML = `
+        <li>За обраними параметрами ${brigadeText} загальний обсяг ${fuelText} становить <strong>${formatNumber(total)} л</strong>.</li>
+        <li>Середньодобовий показник становить <strong>${formatNumber(avg)} л</strong>, що дозволяє швидко оцінити типовий рівень споживання.</li>
+        <li>Найбільше значення зафіксовано <strong>${peak.date}</strong> — <strong>${formatNumber(peak.value)} л</strong>.</li>
+        <li>Найменше значення зафіксовано <strong>${min.date}</strong> — <strong>${formatNumber(min.value)} л</strong>.</li>
+      `;
+    }
+
+    function render() {
+      const { rows, fuelType } = getSelectedData();
+      updateCards(rows, fuelType);
+      updateTable(rows);
+      drawBarChart(rows, fuelType);
+      drawPieChart(rows);
+      updateInsights(rows, fuelType);
+    }
+
+    brigadeSelect.addEventListener("change", render);
+    fuelSelect.addEventListener("change", render);
+
+    populateBrigades();
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Моніторинг витрат пального</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #171a16;
+      --panel: #23281f;
+      --panel-2: #2f3528;
+      --border: #596148;
+      --accent: #8e9a5b;
+      --accent-2: #c7b67a;
+      --text: #eef2e6;
+      --muted: #b8c0aa;
+      --danger: #d68a73;
+      --good: #8fb38a;
+      --shadow: 0 10px 24px rgba(0,0,0,.22);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(180deg, #131512 0%, #1c2018 100%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      background: rgba(35,40,31,.96);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+    }
+    .title h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      letter-spacing: .3px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    select, button {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    button {
+      cursor: pointer;
+      transition: .2s ease;
+    }
+    button:hover, .toggle:hover, .chip:hover {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+    }
+    .toggle-group {
+      display: flex;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .toggle {
+      border: 0;
+      border-right: 1px solid var(--border);
+      border-radius: 0;
+      background: transparent;
+    }
+    .toggle:last-child { border-right: 0; }
+    .toggle.active, .chip.active {
+      background: var(--accent);
+      color: #10130e;
+      font-weight: 700;
+    }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .kpi {
+      cursor: pointer;
+      transition: .2s ease;
+      min-height: 112px;
+    }
+    .kpi:hover { transform: translateY(-2px); }
+    .kpi-title {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .kpi-value {
+      font-size: 30px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .kpi-note {
+      font-size: 13px;
+      color: var(--accent-2);
+    }
+    .grid-main {
+      display: grid;
+      grid-template-columns: 2fr 1.15fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .panel-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .panel-title h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .panel-sub {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .chart-box { height: 360px; }
+    .chart-box.sm { height: 320px; }
+    .grid-lower {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .heatmap-wrap {
+      overflow-x: auto;
+    }
+    .heatmap {
+      display: grid;
+      grid-template-columns: 120px repeat(7, minmax(88px, 1fr));
+      gap: 8px;
+      align-items: stretch;
+    }
+    .heat-head, .heat-label, .heat-cell {
+      border-radius: 10px;
+      padding: 12px 10px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      text-align: center;
+      font-size: 13px;
+    }
+    .heat-head, .heat-label {
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .heat-cell {
+      cursor: pointer;
+      transition: .15s ease;
+      font-weight: 700;
+    }
+    .heat-cell:hover {
+      transform: scale(1.03);
+      outline: 2px solid rgba(255,255,255,.18);
+    }
+    .heat-cell.active {
+      outline: 2px solid var(--accent-2);
+    }
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      text-align: left;
+    }
+    th {
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      background: rgba(255,255,255,.02);
+      position: sticky;
+      top: 0;
+    }
+    tbody tr:hover {
+      background: rgba(255,255,255,.03);
+    }
+    .table-wrap {
+      max-height: 350px;
+      overflow: auto;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .metric-mini {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .metric-mini .label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .metric-mini .val {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .commentary {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(142,154,91,.1);
+      border: 1px solid rgba(142,154,91,.3);
+      color: #f2f3dd;
+      line-height: 1.45;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .footer-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    @media (max-width: 1200px) {
+      .kpis { grid-template-columns: repeat(3, 1fr); }
+      .grid-main, .grid-lower, .bottom-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .kpis { grid-template-columns: repeat(1, 1fr); }
+      .title h1 { font-size: 23px; }
+      .controls { justify-content: flex-start; }
+      .heatmap { grid-template-columns: 90px repeat(7, minmax(74px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">
+        <h1>Моніторинг витрат пального</h1>
+        <div class="subtitle">Період: <strong>03.04.2026 – 09.04.2026</strong> · 4 бригади · інтерактивна аналітична панель</div>
+      </div>
+      <div class="controls">
+        <select id="brigadeSelect"></select>
+        <select id="fuelSelect"></select>
+        <select id="viewModeSelect">
+          <option value="daily">Денне</option>
+          <option value="weekly">Тижневе</option>
+          <option value="comparative">Порівняльне</option>
+        </select>
+        <div class="toggle-group" id="themeSwitch">
+          <button class="toggle active" data-theme="overall">Загальний</button>
+          <button class="toggle" data-theme="brigades">По бригадах</button>
+          <button class="toggle" data-theme="types">По типах пального</button>
+        </div>
+        <button id="anomalyBtn">Показати лише аномалії</button>
+        <button id="exportBtn">Експорт CSV</button>
+        <button id="resetBtn">Скинути фільтри</button>
+        <button id="refreshBtn">Оновити</button>
+      </div>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="grid-main">
+      <div class="card">
+        <div class="panel-title">
+          <div>
+            <h3>Динаміка витрат</h3>
+            <div class="panel-sub">Клік по точці відкриває деталізацію за датою</div>
+          </div>
+          <div class="chips" id="lineHints"></div>
+        </div>
+        <div class="chart-box"><canvas id="lineChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="panel-title">
+          <div>
+            <h3>Порівняння бригад</h3>
+            <div class="panel-sub">Клік по стовпчику фільтрує бригаду</div>
+          </div>
+        </div>
+        <div class="chart-box"><canvas id="barChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid-lower">
+      <div class="card">
+        <div class="panel-title">
+          <div>
+            <h3>Структура пального</h3>
+            <div class="panel-sub">Натискання на сегмент залишає відповідний тип пального</div>
+          </div>
+        </div>
+        <div class="chart-box sm"><canvas id="stackedChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="panel-title">
+          <div>
+            <h3>Heatmap: бригади × дні</h3>
+            <div class="panel-sub">Темніший тон = вища витрата</div>
+          </div>
+        </div>
+        <div class="heatmap-wrap"><div class="heatmap" id="heatmap"></div></div>
+      </div>
+    </div>
+
+    <div class="bottom-grid">
+      <div class="card">
+        <div class="panel-title">
+          <div>
+            <h3>Таблиця даних</h3>
+            <div class="panel-sub">Сортування по заголовках · рядок відкриває деталізацію</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-sort="date">Дата</th>
+                <th data-sort="brigade">Бригада</th>
+                <th data-sort="diesel">Diesel</th>
+                <th data-sort="petrol">Petrol</th>
+                <th data-sort="aviation_fuel">Aviation</th>
+                <th data-sort="total">Total</th>
+              </tr>
+            </thead>
+            <tbody id="dataTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="panel-title">
+          <div>
+            <h3>Панель деталей</h3>
+            <div class="panel-sub">Drill-down за кліком із графіків, heatmap або таблиці</div>
+          </div>
+        </div>
+        <div id="detailPanel">
+          <div class="subtitle">Оберіть точку аналізу, щоб побачити деталізацію.</div>
+        </div>
+        <div class="footer-note">Примітка: aviation_fuel у тестовому наборі характерний переважно для BDE-03.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const rawData = [
+      { date: '03.04.2026', brigade: 'BDE-01', diesel: 820, petrol: 170, aviation_fuel: 0 },
+      { date: '04.04.2026', brigade: 'BDE-01', diesel: 860, petrol: 180, aviation_fuel: 0 },
+      { date: '05.04.2026', brigade: 'BDE-01', diesel: 910, petrol: 195, aviation_fuel: 0 },
+      { date: '06.04.2026', brigade: 'BDE-01', diesel: 875, petrol: 185, aviation_fuel: 0 },
+      { date: '07.04.2026', brigade: 'BDE-01', diesel: 930, petrol: 210, aviation_fuel: 0 },
+      { date: '08.04.2026', brigade: 'BDE-01', diesel: 980, petrol: 220, aviation_fuel: 0 },
+      { date: '09.04.2026', brigade: 'BDE-01', diesel: 940, petrol: 205, aviation_fuel: 0 },
+
+      { date: '03.04.2026', brigade: 'BDE-02', diesel: 1040, petrol: 230, aviation_fuel: 0 },
+      { date: '04.04.2026', brigade: 'BDE-02', diesel: 1090, petrol: 245, aviation_fuel: 0 },
+      { date: '05.04.2026', brigade: 'BDE-02', diesel: 1125, petrol: 255, aviation_fuel: 0 },
+      { date: '06.04.2026', brigade: 'BDE-02', diesel: 1180, petrol: 265, aviation_fuel: 0 },
+      { date: '07.04.2026', brigade: 'BDE-02', diesel: 1210, petrol: 285, aviation_fuel: 0 },
+      { date: '08.04.2026', brigade: 'BDE-02', diesel: 1330, petrol: 310, aviation_fuel: 0 },
+      { date: '09.04.2026', brigade: 'BDE-02', diesel: 1260, petrol: 290, aviation_fuel: 0 },
+
+      { date: '03.04.2026', brigade: 'BDE-03', diesel: 780, petrol: 160, aviation_fuel: 320 },
+      { date: '04.04.2026', brigade: 'BDE-03', diesel: 800, petrol: 170, aviation_fuel: 340 },
+      { date: '05.04.2026', brigade: 'BDE-03', diesel: 845, petrol: 175, aviation_fuel: 360 },
+      { date: '06.04.2026', brigade: 'BDE-03', diesel: 820, petrol: 180, aviation_fuel: 355 },
+      { date: '07.04.2026', brigade: 'BDE-03', diesel: 880, petrol: 190, aviation_fuel: 390 },
+      { date: '08.04.2026', brigade: 'BDE-03', diesel: 905, petrol: 200, aviation_fuel: 410 },
+      { date: '09.04.2026', brigade: 'BDE-03', diesel: 860, petrol: 188, aviation_fuel: 395 },
+
+      { date: '03.04.2026', brigade: 'BDE-04', diesel: 690, petrol: 140, aviation_fuel: 0 },
+      { date: '04.04.2026', brigade: 'BDE-04', diesel: 715, petrol: 145, aviation_fuel: 0 },
+      { date: '05.04.2026', brigade: 'BDE-04', diesel: 735, petrol: 150, aviation_fuel: 0 },
+      { date: '06.04.2026', brigade: 'BDE-04', diesel: 760, petrol: 155, aviation_fuel: 0 },
+      { date: '07.04.2026', brigade: 'BDE-04', diesel: 790, petrol: 165, aviation_fuel: 0 },
+      { date: '08.04.2026', brigade: 'BDE-04', diesel: 810, petrol: 170, aviation_fuel: 0 },
+      { date: '09.04.2026', brigade: 'BDE-04', diesel: 795, petrol: 168, aviation_fuel: 0 }
+    ].map(d => ({ ...d, total: d.diesel + d.petrol + d.aviation_fuel }));
+
+    const state = {
+      brigade: 'all',
+      fuel: 'all',
+      mode: 'daily',
+      theme: 'overall',
+      anomaliesOnly: false,
+      selectedPoint: null,
+      sortKey: 'date',
+      sortDir: 'asc'
+    };
+
+    const dates = [...new Set(rawData.map(d => d.date))];
+    const brigades = [...new Set(rawData.map(d => d.brigade))];
+    const fuels = ['diesel', 'petrol', 'aviation_fuel'];
+
+    const el = id => document.getElementById(id);
+    const fmt = n => `${Math.round(n).toLocaleString('uk-UA')} л`;
+    const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : 0;
+
+    function initControls() {
+      el('brigadeSelect').innerHTML = ['<option value="all">Усі бригади</option>', ...brigades.map(b => `<option value="${b}">${b}</option>`)].join('');
+      el('fuelSelect').innerHTML = ['<option value="all">Усі типи пального</option>', ...fuels.map(f => `<option value="${f}">${f}</option>`)].join('');
+
+      el('brigadeSelect').addEventListener('change', e => { state.brigade = e.target.value; render(); });
+      el('fuelSelect').addEventListener('change', e => { state.fuel = e.target.value; render(); });
+      el('viewModeSelect').addEventListener('change', e => { state.mode = e.target.value; render(); });
+      el('refreshBtn').addEventListener('click', () => render());
+      el('resetBtn').addEventListener('click', resetFilters);
+      el('exportBtn').addEventListener('click', exportCSV);
+      el('anomalyBtn').addEventListener('click', () => {
+        state.anomaliesOnly = !state.anomaliesOnly;
+        el('anomalyBtn').classList.toggle('active', state.anomaliesOnly);
+        el('anomalyBtn').textContent = state.anomaliesOnly ? 'Показано лише аномалії' : 'Показати лише аномалії';
+        render();
+      });
+      document.querySelectorAll('#themeSwitch .toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#themeSwitch .toggle').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.theme = btn.dataset.theme;
+          render();
+        });
+      });
+      document.querySelectorAll('th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+          const key = th.dataset.sort;
+          if (state.sortKey === key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+          else { state.sortKey = key; state.sortDir = 'asc'; }
+          renderTable();
+        });
+      });
+    }
+
+    function resetFilters() {
+      state.brigade = 'all';
+      state.fuel = 'all';
+      state.mode = 'daily';
+      state.theme = 'overall';
+      state.anomaliesOnly = false;
+      state.selectedPoint = null;
+      el('brigadeSelect').value = 'all';
+      el('fuelSelect').value = 'all';
+      el('viewModeSelect').value = 'daily';
+      document.querySelectorAll('#themeSwitch .toggle').forEach(b => b.classList.remove('active'));
+      document.querySelector('#themeSwitch .toggle[data-theme="overall"]').classList.add('active');
+      el('anomalyBtn').classList.remove('active');
+      el('anomalyBtn').textContent = 'Показати лише аномалії';
+      render();
+    }
+
+    function getFilteredData() {
+      let data = rawData.filter(r => state.brigade === 'all' || r.brigade === state.brigade);
+      if (state.anomaliesOnly) {
+        const allTotals = data.map(d => d.total);
+        const mean = avg(allTotals);
+        const threshold = mean * 1.15;
+        data = data.filter(d => d.total >= threshold);
+      }
+      return data;
+    }
+
+    function fuelValue(record) {
+      return state.fuel === 'all' ? record.total : record[state.fuel];
+    }
+
+    function aggregateByDate(data) {
+      return dates.map(date => {
+        const items = data.filter(d => d.date === date);
+        return {
+          date,
+          value: items.reduce((s, r) => s + fuelValue(r), 0)
+        };
+      });
+    }
+
+    function aggregateByBrigade(data) {
+      return brigades.map(brigade => {
+        const items = data.filter(d => d.brigade === brigade);
+        return {
+          brigade,
+          total: items.reduce((s, r) => s + fuelValue(r), 0),
+          diesel: items.reduce((s, r) => s + r.diesel, 0),
+          petrol: items.reduce((s, r) => s + r.petrol, 0),
+          aviation_fuel: items.reduce((s, r) => s + r.aviation_fuel, 0),
+          avgDaily: items.length ? items.reduce((s, r) => s + fuelValue(r), 0) / items.length : 0
+        };
+      });
+    }
+
+    function getKPIs(data) {
+      const total = data.reduce((s, r) => s + fuelValue(r), 0);
+      const dailyAvg = total / Math.max(1, new Set(data.map(d => d.date)).size);
+      const grouped = aggregateByBrigade(data).sort((a,b) => b.total - a.total);
+      const fuelTotals = fuels.map(f => ({ fuel: f, total: data.reduce((s, r) => s + r[f], 0) }));
+      const dominantFuel = fuelTotals.sort((a,b)=>b.total-a.total)[0];
+      return [
+        {
+          title: 'Загальна витрата за тиждень',
+          value: fmt(total),
+          note: 'Клік: деталізація по днях',
+          action: () => { state.selectedPoint = { type: 'summary' }; renderDetail(); }
+        },
+        {
+          title: 'Середньодобова витрата',
+          value: fmt(dailyAvg),
+          note: 'Середнє за обраним зрізом',
+          action: () => { state.mode = 'daily'; el('viewModeSelect').value = 'daily'; render(); }
+        },
+        {
+          title: 'Найбільші витрати',
+          value: grouped[0]?.brigade || '—',
+          note: grouped[0] ? fmt(grouped[0].total) : '—',
+          action: () => { state.brigade = grouped[0]?.brigade || 'all'; el('brigadeSelect').value = state.brigade; render(); }
+        },
+        {
+          title: 'Найменші витрати',
+          value: grouped[grouped.length-1]?.brigade || '—',
+          note: grouped[grouped.length-1] ? fmt(grouped[grouped.length-1].total) : '—',
+          action: () => { state.brigade = grouped[grouped.length-1]?.brigade || 'all'; el('brigadeSelect').value = state.brigade; render(); }
+        },
+        {
+          title: 'Домінуючий тип пального',
+          value: dominantFuel ? dominantFuel.fuel : '—',
+          note: dominantFuel ? fmt(dominantFuel.total) : '—',
+          action: () => { state.fuel = dominantFuel?.fuel || 'all'; el('fuelSelect').value = state.fuel; render(); }
+        }
+      ];
+    }
+
+    function renderKPIs(data) {
+      const kpis = getKPIs(data);
+      el('kpis').innerHTML = kpis.map((k, i) => `
+        <div class="card kpi" data-kpi="${i}" title="${k.note}">
+          <div class="kpi-title">${k.title}</div>
+          <div class="kpi-value">${k.value}</div>
+          <div class="kpi-note">${k.note}</div>
+        </div>
+      `).join('');
+      [...document.querySelectorAll('.kpi')].forEach((card, i) => card.addEventListener('click', kpis[i].action));
+    }
+
+    let lineChart, barChart, stackedChart;
+    function destroyCharts() {
+      [lineChart, barChart, stackedChart].forEach(ch => ch && ch.destroy());
+    }
+
+    function renderLineChart(data) {
+      const ctx = el('lineChart');
+      const hints = [];
+      let datasets = [];
+
+      if (state.theme === 'overall') {
+        const aggregated = aggregateByDate(data);
+        datasets = [{
+          label: state.fuel === 'all' ? 'Загальна витрата' : state.fuel,
+          data: aggregated.map(x => x.value),
+          borderColor: '#c7b67a',
+          backgroundColor: 'rgba(199,182,122,.2)',
+          tension: .25,
+          fill: true,
+          pointRadius: 5,
+          pointHoverRadius: 7
+        }];
+        hints.push('1 сумарна лінія');
+      } else if (state.theme === 'brigades') {
+        datasets = brigades.map((brigade, i) => {
+          const items = dates.map(date => data.filter(d => d.date === date && d.brigade === brigade).reduce((s, r) => s + fuelValue(r), 0));
+          return {
+            label: brigade,
+            data: items,
+            borderColor: ['#c7b67a','#8e9a5b','#9bb9a5','#d68a73'][i],
+            backgroundColor: 'transparent',
+            tension: .25,
+            pointRadius: 4,
+            borderWidth: 3
+          };
+        });
+        hints.push('4 лінії по бригадах');
+      } else {
+        datasets = fuels.map((fuel, i) => ({
+          label: fuel,
+          data: dates.map(date => data.filter(d => d.date === date).reduce((s, r) => s + r[fuel], 0)),
+          borderColor: ['#8e9a5b','#c7b67a','#d68a73'][i],
+          backgroundColor: 'transparent',
+          tension: .25,
+          pointRadius: 4,
+          borderWidth: 3
+        }));
+        hints.push('3 лінії по типах пального');
+      }
+
+      el('lineHints').innerHTML = hints.map(h => `<div class="chip active">${h}</div>`).join('');
+
+      lineChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: dates, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'nearest', intersect: false },
+          plugins: {
+            legend: { labels: { color: '#eef2e6' } },
+            tooltip: {
+              callbacks: {
+                label: c => `${c.dataset.label}: ${Math.round(c.raw).toLocaleString('uk-UA')} л`
+              }
+            }
+          },
+          scales: {
+            x: { ticks: { color: '#b8c0aa' }, grid: { color: 'rgba(255,255,255,.05)' } },
+            y: { ticks: { color: '#b8c0aa' }, grid: { color: 'rgba(255,255,255,.05)' } }
+          },
+          onClick: (_, elements) => {
+            if (!elements.length) return;
+            const index = elements[0].index;
+            state.selectedPoint = { type: 'date', date: dates[index] };
+            renderDetail();
+          }
+        }
+      });
+    }
+
+    function renderBarChart(data) {
+      const grouped = aggregateByBrigade(data);
+      barChart = new Chart(el('barChart'), {
+        type: 'bar',
+        data: {
+          labels: grouped.map(g => g.brigade),
+          datasets: [{
+            label: 'Витрата за тиждень',
+            data: grouped.map(g => g.total),
+            backgroundColor: grouped.map(g => g.brigade === state.brigade ? '#c7b67a' : '#8e9a5b')
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: c => `${fmt(c.raw)}`,
+                afterBody: items => {
+                  const g = grouped[items[0].dataIndex];
+                  return [`Сер. добова: ${fmt(g.avgDaily)}`, `Diesel: ${fmt(g.diesel)}`, `Petrol: ${fmt(g.petrol)}`, `Aviation: ${fmt(g.aviation_fuel)}`];
+                }
+              }
+            }
+          },
+          scales: {
+            x: { ticks: { color: '#b8c0aa' }, grid: { color: 'rgba(255,255,255,.05)' } },
+            y: { ticks: { color: '#eef2e6' }, grid: { display: false } }
+          },
+          onClick: (_, elements) => {
+            if (!elements.length) return;
+            const b = grouped[elements[0].index].brigade;
+            state.brigade = state.brigade === b ? 'all' : b;
+            el('brigadeSelect').value = state.brigade;
+            render();
+          }
+        }
+      });
+    }
+
+    function renderStackedChart(data) {
+      const grouped = aggregateByBrigade(data);
+      stackedChart = new Chart(el('stackedChart'), {
+        type: 'bar',
+        data: {
+          labels: grouped.map(g => g.brigade),
+          datasets: [
+            { label: 'diesel', data: grouped.map(g => g.diesel), backgroundColor: '#8e9a5b' },
+            { label: 'petrol', data: grouped.map(g => g.petrol), backgroundColor: '#c7b67a' },
+            { label: 'aviation_fuel', data: grouped.map(g => g.aviation_fuel), backgroundColor: '#d68a73' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#eef2e6' } },
+            tooltip: {
+              callbacks: {
+                label: c => {
+                  const total = grouped[c.dataIndex].diesel + grouped[c.dataIndex].petrol + grouped[c.dataIndex].aviation_fuel;
+                  const pct = total ? (c.raw / total * 100).toFixed(1) : 0;
+                  return `${c.dataset.label}: ${fmt(c.raw)} (${pct}%)`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { stacked: true, ticks: { color: '#eef2e6' }, grid: { display: false } },
+            y: { stacked: true, ticks: { color: '#b8c0aa' }, grid: { color: 'rgba(255,255,255,.05)' } }
+          },
+          onClick: (_, elements, chart) => {
+            if (!elements.length) return;
+            const datasetIndex = elements[0].datasetIndex;
+            state.fuel = chart.data.datasets[datasetIndex].label;
+            el('fuelSelect').value = state.fuel;
+            render();
+          }
+        }
+      });
+    }
+
+    function getHeatColor(value, min, max) {
+      const ratio = max === min ? 0.5 : (value - min) / (max - min);
+      const light = 28 + ratio * 32;
+      return `hsl(74, 28%, ${light}%)`;
+    }
+
+    function renderHeatmap(data) {
+      const values = data.map(d => fuelValue(d));
+      const min = Math.min(...values), max = Math.max(...values);
+      const container = el('heatmap');
+      container.innerHTML = '';
+      container.insertAdjacentHTML('beforeend', `<div class="heat-head"></div>` + dates.map(d => `<div class="heat-head">${d.slice(0,5)}</div>`).join(''));
+      brigades.forEach(brigade => {
+        container.insertAdjacentHTML('beforeend', `<div class="heat-label">${brigade}</div>`);
+        dates.forEach(date => {
+          const item = data.find(d => d.brigade === brigade && d.date === date) || { diesel:0, petrol:0, aviation_fuel:0, total:0 };
+          const value = fuelValue(item);
+          const isActive = state.selectedPoint && state.selectedPoint.type === 'row' && state.selectedPoint.date === date && state.selectedPoint.brigade === brigade;
+          container.insertAdjacentHTML('beforeend', `
+            <div class="heat-cell ${isActive ? 'active' : ''}" 
+                 data-brigade="${brigade}" data-date="${date}" 
+                 style="background:${getHeatColor(value, min, max)}; color:${value > (min+max)/2 ? '#111' : '#eef2e6'}"
+                 title="${brigade}, ${date}: ${fmt(value)}">
+              ${Math.round(value)}
+            </div>`);
+        });
+      });
+      [...document.querySelectorAll('.heat-cell')].forEach(cell => cell.addEventListener('click', () => {
+        state.selectedPoint = { type: 'row', brigade: cell.dataset.brigade, date: cell.dataset.date };
+        renderDetail();
+        renderHeatmap(getFilteredData());
+      }));
+    }
+
+    function renderTable() {
+      let data = getFilteredData().map(r => ({ ...r, selectedFuelValue: fuelValue(r) }));
+      data.sort((a, b) => {
+        const dir = state.sortDir === 'asc' ? 1 : -1;
+        if (typeof a[state.sortKey] === 'string') return a[state.sortKey].localeCompare(b[state.sortKey]) * dir;
+        return (a[state.sortKey] - b[state.sortKey]) * dir;
+      });
+      el('dataTable').innerHTML = data.map(row => `
+        <tr data-date="${row.date}" data-brigade="${row.brigade}">
+          <td>${row.date}</td>
+          <td>${row.brigade}</td>
+          <td>${row.diesel}</td>
+          <td>${row.petrol}</td>
+          <td>${row.aviation_fuel}</td>
+          <td><strong>${row.total}</strong></td>
+        </tr>
+      `).join('');
+      [...el('dataTable').querySelectorAll('tr')].forEach(tr => tr.addEventListener('click', () => {
+        state.selectedPoint = { type: 'row', date: tr.dataset.date, brigade: tr.dataset.brigade };
+        renderDetail();
+      }));
+    }
+
+    function insightFor(item, data) {
+      const brigadeSeries = rawData.filter(d => d.brigade === item.brigade);
+      const current = fuelValue(item);
+      const prevIndex = brigadeSeries.findIndex(x => x.date === item.date) - 1;
+      const prev = prevIndex >= 0 ? fuelValue(brigadeSeries[prevIndex]) : null;
+      const avgBrigade = avg(brigadeSeries.map(fuelValue));
+      const diff = current - avgBrigade;
+      const pctPrev = prev ? ((current - prev) / prev * 100) : 0;
+      const isPeak = current === Math.max(...brigadeSeries.map(fuelValue));
+      if (isPeak) return `Пікове значення для ${item.brigade} за період. Це може свідчити про підвищену інтенсивність дій або активне переміщення техніки.`;
+      if (prev !== null && pctPrev > 10) return `Спостерігається зростання на ${pctPrev.toFixed(1)}% до попереднього дня. Варто перевірити фактори, що спричинили стрибок витрат.`;
+      if (diff < 0) return `Витрата нижча за середню для ${item.brigade} на ${Math.abs(diff).toFixed(0)} л. Це може означати стабілізацію активності або економніший режим використання.`;
+      return `Показник близький до типової динаміки для цієї бригади. Суттєвих відхилень від базового профілю не виявлено.`;
+    }
+
+    function renderDetail() {
+      const panel = el('detailPanel');
+      const data = getFilteredData();
+      if (!state.selectedPoint) {
+        panel.innerHTML = `<div class="subtitle">Оберіть точку аналізу, щоб побачити деталізацію.</div>`;
+        return;
+      }
+      if (state.selectedPoint.type === 'summary') {
+        const byDate = aggregateByDate(data);
+        const peak = [...byDate].sort((a,b)=>b.value-a.value)[0];
+        const low = [...byDate].sort((a,b)=>a.value-b.value)[0];
+        panel.innerHTML = `
+          <div class="subtitle">Зведена деталізація за період</div>
+          <div class="detail-grid">
+            <div class="metric-mini"><div class="label">Піковий день</div><div class="val">${peak.date}</div></div>
+            <div class="metric-mini"><div class="label">Витрата у піковий день</div><div class="val">${fmt(peak.value)}</div></div>
+            <div class="metric-mini"><div class="label">Найнижчий день</div><div class="val">${low.date}</div></div>
+            <div class="metric-mini"><div class="label">Витрата у найнижчий день</div><div class="val">${fmt(low.value)}</div></div>
+          </div>
+          <div class="commentary">За обраним зрізом найвищий рівень витрат зафіксовано <strong>${peak.date}</strong>, а найнижчий — <strong>${low.date}</strong>. Це допомагає швидко визначити дні для пріоритетного аналізу причин коливань.</div>
+        `;
+        return;
+      }
+
+      let item;
+      if (state.selectedPoint.type === 'date') {
+        const rows = data.filter(d => d.date === state.selectedPoint.date);
+        const total = rows.reduce((s, r) => s + fuelValue(r), 0);
+        const top = [...rows].sort((a,b)=>fuelValue(b)-fuelValue(a))[0];
+        panel.innerHTML = `
+          <div class="subtitle">Деталізація за датою <strong>${state.selectedPoint.date}</strong></div>
+          <div class="detail-grid">
+            <div class="metric-mini"><div class="label">Загальна витрата</div><div class="val">${fmt(total)}</div></div>
+            <div class="metric-mini"><div class="label">Найактивніша бригада</div><div class="val">${top?.brigade || '—'}</div></div>
+            <div class="metric-mini"><div class="label">Diesel</div><div class="val">${fmt(rows.reduce((s,r)=>s+r.diesel,0))}</div></div>
+            <div class="metric-mini"><div class="label">Petrol + Aviation</div><div class="val">${fmt(rows.reduce((s,r)=>s+r.petrol+r.aviation_fuel,0))}</div></div>
+          </div>
+          <div class="commentary">У фокусі дата <strong>${state.selectedPoint.date}</strong>. Найбільший внесок у витрати в цей день забезпечила <strong>${top?.brigade || '—'}</strong>. Доцільно зіставити цей день із характером виконуваних завдань або темпом переміщень.</div>
+        `;
+        return;
+      }
+
+      item = rawData.find(d => d.date === state.selectedPoint.date && d.brigade === state.selectedPoint.brigade);
+      if (!item) {
+        panel.innerHTML = `<div class="subtitle">Для поточного фільтра дані не знайдено.</div>`;
+        return;
+      }
+      const brigadeSeries = rawData.filter(d => d.brigade === item.brigade);
+      const avgBrigade = avg(brigadeSeries.map(fuelValue));
+      const prevIndex = brigadeSeries.findIndex(x => x.date === item.date) - 1;
+      const prev = prevIndex >= 0 ? fuelValue(brigadeSeries[prevIndex]) : null;
+      const current = fuelValue(item);
+      const delta = prev !== null ? current - prev : 0;
+      const deltaPct = prev ? (delta / prev * 100) : 0;
+      panel.innerHTML = `
+        <div class="subtitle"><strong>${item.brigade}</strong> · ${item.date}</div>
+        <div class="detail-grid">
+          <div class="metric-mini"><div class="label">Diesel</div><div class="val">${fmt(item.diesel)}</div></div>
+          <div class="metric-mini"><div class="label">Petrol</div><div class="val">${fmt(item.petrol)}</div></div>
+          <div class="metric-mini"><div class="label">Aviation fuel</div><div class="val">${fmt(item.aviation_fuel)}</div></div>
+          <div class="metric-mini"><div class="label">Total</div><div class="val">${fmt(item.total)}</div></div>
+          <div class="metric-mini"><div class="label">Відхилення від середнього</div><div class="val">${(current - avgBrigade >= 0 ? '+' : '') + Math.round(current - avgBrigade)} л</div></div>
+          <div class="metric-mini"><div class="label">Зміна до попереднього дня</div><div class="val">${prev === null ? '—' : `${delta >= 0 ? '+' : ''}${Math.round(delta)} л (${deltaPct.toFixed(1)}%)`}</div></div>
+        </div>
+        <div class="commentary">${insightFor(item, rawData)}</div>
+      `;
+    }
+
+    function exportCSV() {
+      const rows = getFilteredData();
+      const header = ['date','brigade','diesel','petrol','aviation_fuel','total'];
+      const csv = [header.join(',')].concat(rows.map(r => header.map(h => r[h]).join(','))).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fuel_dashboard_export.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      const data = getFilteredData();
+      renderKPIs(data);
+      destroyCharts();
+      renderLineChart(data);
+      renderBarChart(data);
+      renderStackedChart(data);
+      renderHeatmap(data);
+      renderTable();
+      renderDetail();
+    }
+
+    initControls();
+    render();
+  </script>
+</body>
+</html>
